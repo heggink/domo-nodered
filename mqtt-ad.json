@@ -1,0 +1,234 @@
+[
+    {
+        "id": "10fc632fd2605325",
+        "type": "tab",
+        "label": "Domo MQTT-AD",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "1f143be345509fc4",
+        "type": "group",
+        "z": "10fc632fd2605325",
+        "name": "MQTT",
+        "style": {
+            "stroke": "#ff7f7f",
+            "fill": "#ffcf3f",
+            "label": true
+        },
+        "nodes": [
+            "65069aba819ac298",
+            "51eca7c95df3d653",
+            "6e58cbb75718424f",
+            "a52d1bcc673c79e9",
+            "b3661cc297c464ea",
+            "5a0d9d3ef160672d",
+            "a81649a56956040c",
+            "460cd29cb6298df8"
+        ],
+        "x": 54,
+        "y": 59,
+        "w": 812,
+        "h": 142
+    },
+    {
+        "id": "65069aba819ac298",
+        "type": "function",
+        "z": "10fc632fd2605325",
+        "g": "1f143be345509fc4",
+        "name": "construct MQTT-AD",
+        "func": "// messages on output 1 will be rate limit\n\nlet data_msg = context.flow.data || {};\nlet data_timestamp = context.flow.timetamp || {};\nlet topic = msg.topic;\n\nlet sendnow = false;\n\nif (typeof msg.sendnow !== 'undefined') {\n    sendnow = (msg.sendnow == true);\n}\n\ndata_msg[topic] = msg.payload;\ndata_timestamp[topic] = Date.now();\ncontext.flow.data = data_msg;\ncontext.flow.timetamp = data_timestamp;\n\nmsg.topic = final_topic;\n\nlet msg2 = null;\n\nif (sendnow == true) {\n    //node.warn('send now: ' + msg.topic);\n    //send directly\n    msg2 = msg;\n    msg = null;\n}\n\nreturn [msg, msg2];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 220,
+        "y": 100,
+        "wires": [
+            [
+                "a52d1bcc673c79e9"
+            ],
+            [
+                "460cd29cb6298df8"
+            ]
+        ]
+    },
+    {
+        "id": "51eca7c95df3d653",
+        "type": "mqtt out",
+        "z": "10fc632fd2605325",
+        "g": "1f143be345509fc4",
+        "name": "Domoticz-MQTT",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "ee1bb25c871ce5fc",
+        "x": 760,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "6e58cbb75718424f",
+        "type": "debug",
+        "z": "10fc632fd2605325",
+        "g": "1f143be345509fc4",
+        "name": "JSON Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 750,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "a52d1bcc673c79e9",
+        "type": "delay",
+        "z": "10fc632fd2605325",
+        "g": "1f143be345509fc4",
+        "name": "Rate Limit",
+        "pauseType": "timed",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "10",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 420,
+        "y": 100,
+        "wires": [
+            [
+                "a81649a56956040c"
+            ]
+        ]
+    },
+    {
+        "id": "b3661cc297c464ea",
+        "type": "link in",
+        "z": "10fc632fd2605325",
+        "g": "1f143be345509fc4",
+        "name": "ToMQTT-Limit",
+        "links": [
+            "0345f695c1dfd5d6",
+            "65effef794282240",
+            "c7d748eb11b99b19",
+            "e2d3436b021427b3",
+            "bcb867cdabdf4b57"
+        ],
+        "x": 95,
+        "y": 100,
+        "wires": [
+            [
+                "65069aba819ac298"
+            ]
+        ]
+    },
+    {
+        "id": "5a0d9d3ef160672d",
+        "type": "link in",
+        "z": "10fc632fd2605325",
+        "g": "1f143be345509fc4",
+        "name": "ToMQTT-Direct",
+        "links": [
+            "a81649a56956040c",
+            "460cd29cb6298df8",
+            "6dac7cf5a4966dcb",
+            "808a9cae99745e77",
+            "dfcc30d64c504632",
+            "25868d22910fcb46",
+            "8145ee0070df928d",
+            "56c1d4b113af04fb",
+            "c42e7aa67ec2e4bb",
+            "751149da5d5a52c1",
+            "dbf8d2f0445575d6",
+            "b7d2edb2f45acb7b",
+            "f1c432e8db1eb33c",
+            "d18dcd2b02557f67",
+            "41fbcbb3a1bbb233",
+            "5b61f9aed02961a3",
+            "f55310cc97b172ad",
+            "c4afdf88f97878c3"
+        ],
+        "x": 605,
+        "y": 140,
+        "wires": [
+            [
+                "6e58cbb75718424f",
+                "51eca7c95df3d653"
+            ]
+        ]
+    },
+    {
+        "id": "a81649a56956040c",
+        "type": "link out",
+        "z": "10fc632fd2605325",
+        "g": "1f143be345509fc4",
+        "name": "ToMQTT-Direct",
+        "mode": "link",
+        "links": [
+            "5a0d9d3ef160672d"
+        ],
+        "x": 525,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "460cd29cb6298df8",
+        "type": "link out",
+        "z": "10fc632fd2605325",
+        "g": "1f143be345509fc4",
+        "name": "ToMQTT-Direct",
+        "mode": "link",
+        "links": [
+            "5a0d9d3ef160672d"
+        ],
+        "x": 375,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "ee1bb25c871ce5fc",
+        "type": "mqtt-broker",
+        "name": "MQTT",
+        "broker": "YOUR MQTT BROKER",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

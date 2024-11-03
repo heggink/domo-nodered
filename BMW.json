@@ -1,0 +1,263 @@
+[
+    {
+        "id": "313c340012e41a6c",
+        "type": "tab",
+        "label": "BMW",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "aef631b593aaa890",
+        "type": "car-bmw-list",
+        "z": "313c340012e41a6c",
+        "account": "5081f46871b74029",
+        "name": "i4",
+        "as": "single",
+        "x": 310,
+        "y": 140,
+        "wires": [
+            [
+                "4b068414b52756cd"
+            ]
+        ]
+    },
+    {
+        "id": "9545408df29fa6e3",
+        "type": "car-bmw-get",
+        "z": "313c340012e41a6c",
+        "account": "FILL IN",
+        "name": "i4",
+        "datatype": "charging-statistics",
+        "x": 290,
+        "y": 280,
+        "wires": [
+            [
+                "062deaa949e65f85"
+            ]
+        ]
+    },
+    {
+        "id": "1f2ed5e6c22813cd",
+        "type": "inject",
+        "z": "313c340012e41a6c",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 140,
+        "wires": [
+            [
+                "aef631b593aaa890"
+            ]
+        ]
+    },
+    {
+        "id": "4b068414b52756cd",
+        "type": "debug",
+        "z": "313c340012e41a6c",
+        "name": "Info",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 490,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "1317ce3d69fb0b52",
+        "type": "inject",
+        "z": "313c340012e41a6c",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "Yo",
+        "payloadType": "str",
+        "x": 110,
+        "y": 280,
+        "wires": [
+            [
+                "9545408df29fa6e3"
+            ]
+        ]
+    },
+    {
+        "id": "062deaa949e65f85",
+        "type": "debug",
+        "z": "313c340012e41a6c",
+        "name": "Status",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 490,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "50743fa0.f3ba5",
+        "type": "inject",
+        "z": "313c340012e41a6c",
+        "name": "",
+        "props": [
+            {
+                "p": "payload",
+                "v": "",
+                "vt": "date"
+            },
+            {
+                "p": "topic",
+                "v": "",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 460,
+        "wires": [
+            [
+                "83f261b6.ae49b"
+            ]
+        ]
+    },
+    {
+        "id": "83f261b6.ae49b",
+        "type": "car-bmw-list",
+        "z": "313c340012e41a6c",
+        "account": "5081f46871b74029",
+        "name": "YOUR NAME",
+        "as": "multi",
+        "x": 360,
+        "y": 460,
+        "wires": [
+            [
+                "14e76857.f58c78",
+                "cb4090a2.e4aac8"
+            ]
+        ]
+    },
+    {
+        "id": "14e76857.f58c78",
+        "type": "debug",
+        "z": "313c340012e41a6c",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 650,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "26e62839.e6ff8",
+        "type": "car-bmw-get",
+        "z": "313c340012e41a6c",
+        "account": "5081f46871b74029",
+        "name": "YOUR NAME",
+        "datatype": "state",
+        "x": 860,
+        "y": 460,
+        "wires": [
+            [
+                "717a63b8.7347e4"
+            ]
+        ]
+    },
+    {
+        "id": "717a63b8.7347e4",
+        "type": "debug",
+        "z": "313c340012e41a6c",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1070,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "cb4090a2.e4aac8",
+        "type": "function",
+        "z": "313c340012e41a6c",
+        "name": "",
+        "func": "var newMsg = {\n    \"vin\": msg.payload.vin\n}\nreturn newMsg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 460,
+        "wires": [
+            [
+                "26e62839.e6ff8"
+            ]
+        ]
+    },
+    {
+        "id": "a2371e86215387fb",
+        "type": "comment",
+        "z": "313c340012e41a6c",
+        "name": "Example: Read state of all cars of the ConnectedDrive account",
+        "info": "",
+        "x": 280,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "5081f46871b74029",
+        "type": "car-bmw",
+        "name": "YOUR NAME",
+        "region": "0",
+        "unit": "metric",
+        "debug": true
+    }
+]

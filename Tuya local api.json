@@ -1,0 +1,1328 @@
+[
+    {
+        "id": "a88f65a9838d7470",
+        "type": "tab",
+        "label": "tuya",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "7433721c7e029541",
+        "type": "group",
+        "z": "a88f65a9838d7470",
+        "name": "Initialization",
+        "style": {
+            "fill": "#d1d1d1",
+            "label": true,
+            "color": "#000000"
+        },
+        "nodes": [
+            "b09e169a94e1f045",
+            "112b28ac439068c3",
+            "f55310cc97b172ad"
+        ],
+        "x": 54,
+        "y": 19,
+        "w": 442,
+        "h": 82
+    },
+    {
+        "id": "8d2397053db5a846",
+        "type": "debug",
+        "z": "a88f65a9838d7470",
+        "name": "Node State",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 970,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "b09e169a94e1f045",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "g": "7433721c7e029541",
+        "name": "Startup Function",
+        "func": "let discovery_topic = \"tuya-ad\";\nlet root_topic = \"tuya\";\n\nlet pobject = [\n    //Switches\n    { \"Badkamer Radiator\": [\"switch\", \"badkamer_radiator\", \"0xB000000001\", \"On\", \"Off\", 0] },\n    { \"Karin IRPanel\": [\"switch\", \"karin_irpanel\", \"0xB000000002\", \"On\", \"Off\", 0] },\n    { \"Badkamer Radiator Temp\": [\"sensor\", \"badkamer_radiator_temp\", \"0xB000000003\", \"\\u00b0c\", \"\", 0] },\n    { \"Karin IRPanel Temp\": [\"sensor\", \"karin_irpanel_temp\", \"0xB000000004\", \"\\u00b0c\", \"\", 0] },\n    { \"Badkamer Setpoint\": [\"climate\", \"badkamer_setpoint\", \"0xB000000005\", \"C\", \"10|60\", 1] },\n    { \"Karin IRPanel Setpoint\": [\"climate\", \"karin_irpanel_setpoint\", \"0xB000000006\", \"C\", \"10|60\", 1] },\n];\n\nfunction createLightObject(root, name, varname, unique_id, payload_on = \"ON\", payload_off = \"OFF\")\n{\n    let vjson = {\n        \"stat_t\": \"~/\" + varname + \"/state\",\n        \"dev\": {\n            \"manufacturer\": \"PA1DVB\"\n        }\n    };\n\n    vjson[\"~\"] = root;\n    vjson[\"name\"] = name;\n    vjson[\"payload_on\"] = payload_on;\n    vjson[\"payload_off\"] = payload_off;\n    vjson[\"cmd_t\"] = \"~/set/\" + varname;\n    vjson[\"uniq_id\"] = unique_id;\n    vjson[\"val_tpl\"] = \"{{ value_json.\" + varname + \" }}\";\n    return vjson;\n}\n\nfunction createSensorObject(root, name, varname, unique_id, unit_of_measurement)\n{\n    let vjson = {\n                \"stat_t\": \"~/\" + varname + \"/state\",\n                \"dev\": {\n                    \"manufacturer\": \"PA1DVB\"\n                }\n            };\n    vjson[\"~\"] = root;\n    vjson[\"name\"] = name;\n    vjson[\"uniq_id\"] = unique_id;\n    vjson[\"unit_of_meas\"] = unit_of_measurement;\n    //vjson[\"val_tpl\"] = \"{{ value_json.\" + varname + \" }}\";\n    return vjson\n}\n\nfunction createClimateObject(root, name, varname, unique_id, unit_of_measurement, min_value = 6.5, max_value = 35.0, step_size = 1.0)\n{\n    let device_identifier = unique_id;\n    if (device_identifier.indexOf(\"_\") != -1)\n    {\n        device_identifier = unique_id.split(\"_\")[0];\n    }\n    \n    let vjson = {\n        \"temp_stat_t\": \"~/\" + varname + \"/state\",\n        \"dev\": {\n            \"manufacturer\": \"PA1DVB\",\n            \"ids\": []\n        }\n    };\n    vjson.dev.ids.push(device_identifier);\n    vjson[\"~\"] = root;\n    vjson[\"name\"] = name;\n    vjson[\"uniq_id\"] = unique_id;\n    vjson[\"temp_unit\"] = unit_of_measurement;\n    vjson[\"temp_cmd_t\"] = \"~/set/\" + varname;\n    vjson[\"temp_stat_tpl\"] = \"{{ value_json.\" + varname + \" }}\";\n    vjson[\"temp_step\"] = step_size;\n    vjson[\"min_temp\"] = min_value;\n    vjson[\"max_temp\"] = max_value;\n    return vjson\n}\n\nnode.log(\"Tuya Devices Initialisation\");\n\npobject.forEach((vvar) => {\n    let name = Object.keys(vvar)[0];\n    let vobj = vvar[Object.keys(vvar)];\n    let object_type = vobj[0]\n    let varname = vobj[1]\n    let unique_id = vobj[2]\n\n    let jobj = null\n    if (object_type == \"switch\") {\n        let payload_on = vobj[3]\n        let payload_off = vobj[4]\n        jobj = createLightObject(root_topic, name, varname, unique_id, payload_on, payload_off);\n    }\n    else if (object_type == \"sensor\") {\n        let unit_of_measurement = vobj[3]\n        jobj = createSensorObject(root_topic, name, varname, unique_id, unit_of_measurement);\n    }\n    else if (object_type == \"climate\") {\n        let unit_of_measurement = vobj[3]\n        let minmax = vobj[4];\n        let step_size = vobj[5]\n\n        let min_value = 6.5;\n        let max_value = 35;\n        let sresults = minmax.split(\"|\");\n        if (sresults.length == 2) {\n            min_value = parseFloat(sresults[0]);\n            max_value = parseFloat(sresults[1]);\n        }\n\n        jobj = createClimateObject(root_topic, name, varname, unique_id, unit_of_measurement, min_value, max_value, step_size);\n    }\n\n    if (jobj != null) {\n        if (unique_id.indexOf(\"_\") != -1)\n        {\n            unique_id = unique_id.split(\"_\")[0];\n        }\n        let dtopic = discovery_topic + \"/\" + object_type + \"/\" + unique_id + \"/\" + varname + \"/config\"\n        //node.log(\"publishing config ->: \" + dtopic);\n\n        msg.payload = jobj;\n        msg.topic = dtopic;\n        msg.retain = true;\n        node.send(msg);\n    }\n});\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 60,
+        "wires": [
+            [
+                "f55310cc97b172ad"
+            ]
+        ]
+    },
+    {
+        "id": "112b28ac439068c3",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "g": "7433721c7e029541",
+        "name": "Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.3",
+        "topic": "online",
+        "payload": "true",
+        "payloadType": "str",
+        "x": 160,
+        "y": 60,
+        "wires": [
+            [
+                "b09e169a94e1f045"
+            ]
+        ]
+    },
+    {
+        "id": "f55310cc97b172ad",
+        "type": "link out",
+        "z": "a88f65a9838d7470",
+        "g": "7433721c7e029541",
+        "name": "ToMQTT-Direct",
+        "mode": "link",
+        "links": [
+            "5a0d9d3ef160672d"
+        ],
+        "x": 455,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "a042eae8f0d7acd1",
+        "type": "mqtt in",
+        "z": "a88f65a9838d7470",
+        "name": "",
+        "topic": "tuya/set/badkamer_radiator",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "ee1bb25c871ce5fc",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 580,
+        "wires": [
+            [
+                "633e74d2840511f6",
+                "176f205bfc0e3579"
+            ]
+        ]
+    },
+    {
+        "id": "cf6641bba3cca26f",
+        "type": "mqtt in",
+        "z": "a88f65a9838d7470",
+        "name": "",
+        "topic": "tuya/set/karin_irpanel",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "ee1bb25c871ce5fc",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 820,
+        "wires": [
+            [
+                "31f1338548b3d297",
+                "9524c10bc0286018"
+            ]
+        ]
+    },
+    {
+        "id": "633e74d2840511f6",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "on/off",
+        "func": "if (msg.payload=='On')\n    msg.payload=true\nelse\n    msg.payload=false\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 540,
+        "wires": [
+            [
+                "99542889ffa993e4"
+            ]
+        ]
+    },
+    {
+        "id": "31f1338548b3d297",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "on/off",
+        "func": "if (msg.payload=='On')\n    msg.payload=true\nelse\n    msg.payload=false\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 860,
+        "wires": [
+            [
+                "ccdc29771a282f26"
+            ]
+        ]
+    },
+    {
+        "id": "c4afdf88f97878c3",
+        "type": "link out",
+        "z": "a88f65a9838d7470",
+        "name": "ToMQTT",
+        "mode": "link",
+        "links": [
+            "5a0d9d3ef160672d"
+        ],
+        "x": 1235,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "311fbd0417907162",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "Switch Status",
+        "func": "var result = msg.payload.data.dps;\nif (result[1] !== undefined) {\n    if (result[1] == false) {\n        msg.payload = \"Off\"\n    } else {\n        msg.payload = \"On\"\n    }\n//    node.warn(\"found something\")\n//    node.warn(result[\"1\"])\n    msg.topic = \"tuya/badkamer_radiator/state\";\n    msg.sendnow = true;\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 360,
+        "wires": [
+            [
+                "c4afdf88f97878c3"
+            ]
+        ]
+    },
+    {
+        "id": "9524c10bc0286018",
+        "type": "debug",
+        "z": "a88f65a9838d7470",
+        "name": "karin_irpanel",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 350,
+        "y": 820,
+        "wires": []
+    },
+    {
+        "id": "176f205bfc0e3579",
+        "type": "debug",
+        "z": "a88f65a9838d7470",
+        "name": "badkamer_radiator",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 370,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "bfb218b511d173df",
+        "type": "tuya-smart-device",
+        "z": "a88f65a9838d7470",
+        "deviceName": "Karin Panel",
+        "disableAutoStart": false,
+        "deviceId": "bf31cc2a3baf6a51aapzk1",
+        "deviceKey": "8cc37190b4711622",
+        "storeAsCreds": false,
+        "deviceIp": "",
+        "retryTimeout": "1001",
+        "findTimeout": "2000",
+        "tuyaVersion": "3.1",
+        "eventMode": "event-both",
+        "logLevel": "log-level-debug",
+        "x": 750,
+        "y": 920,
+        "wires": [
+            [
+                "06f73a30b98f36b3",
+                "28beda6cacef3e73",
+                "b3f94f629421adfd",
+                "8e5fd41a5a2c8296"
+            ],
+            [
+                "71535360d16f0eaa"
+            ]
+        ]
+    },
+    {
+        "id": "ccdc29771a282f26",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "",
+        "func": "msg.payload ={\n   dps : 1,\n   //dps: 20,\n    set : msg.payload\n}\n\n/*\n\n    */\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 900,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "1c3c5aa99b18550d",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Turn On",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 100,
+        "y": 920,
+        "wires": [
+            [
+                "ccdc29771a282f26"
+            ]
+        ]
+    },
+    {
+        "id": "513cf7affe4eebfe",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Turn Off",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "false",
+        "payloadType": "bool",
+        "x": 100,
+        "y": 960,
+        "wires": [
+            [
+                "ccdc29771a282f26"
+            ]
+        ]
+    },
+    {
+        "id": "8d4fa60537532810",
+        "type": "catch",
+        "z": "a88f65a9838d7470",
+        "name": "",
+        "scope": null,
+        "uncaught": false,
+        "x": 460,
+        "y": 1400,
+        "wires": [
+            [
+                "7b8bcb5d81ea5352"
+            ]
+        ]
+    },
+    {
+        "id": "7b8bcb5d81ea5352",
+        "type": "debug",
+        "z": "a88f65a9838d7470",
+        "name": "On Error",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 1400,
+        "wires": []
+    },
+    {
+        "id": "06f73a30b98f36b3",
+        "type": "debug",
+        "z": "a88f65a9838d7470",
+        "name": "Device Data",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 970,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "71535360d16f0eaa",
+        "type": "debug",
+        "z": "a88f65a9838d7470",
+        "name": "Node State",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 970,
+        "y": 1040,
+        "wires": []
+    },
+    {
+        "id": "6e8f4c27946a0c62",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "RECONNECT ACTION",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"RECONNECT\"}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 1120,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "928ad0a736f85ce4",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "DISCONNECT ACTION",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"DISCONNECT\"}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 1080,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "316fbb45cfc98354",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Get Status of dps 1",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"GET\" , \"dps\": 1}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 1000,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "8c4f723f9e77b6b0",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "SET EVENT MODE - DATA",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"SET_EVENT_MODE\",\"value\":\"event-data\"}",
+        "payloadType": "json",
+        "x": 160,
+        "y": 1160,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "d0a0247f60441a22",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "SET EVENT MODE - DP REFRESH",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"SET_EVENT_MODE\",\"value\":\"event-dp-refresh\"}",
+        "payloadType": "json",
+        "x": 180,
+        "y": 1200,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "3848ba3351a73e6b",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Update Find Timeout",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"SET_FIND_TIMEOUT\",\"value\":1234}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 1240,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "60fa08416480726d",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Update  Retry Timeout",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"SET_RETRY_TIMEOUT\",\"value\":1234}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 1280,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "fee4057a351561e1",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "CONNECT ACTION",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"CONNECT\"}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 1040,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "28beda6cacef3e73",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "Switch Status",
+        "func": "var result = msg.payload.data.dps;\nif (result[1] !== undefined) {\n    if (result[1] == false) {\n        msg.payload = \"Off\"\n    } else {\n        msg.payload = \"On\"\n    }\n//    node.warn(\"found something\")\n//    node.warn(result[\"1\"])\n    msg.topic = \"tuya/karin_irpanel/state\";\n    msg.sendnow = true;\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 920,
+        "wires": [
+            [
+                "c4afdf88f97878c3"
+            ]
+        ]
+    },
+    {
+        "id": "1d52defdfd7483e2",
+        "type": "tuya-smart-device",
+        "z": "a88f65a9838d7470",
+        "deviceName": "Badkamer Radiator",
+        "disableAutoStart": false,
+        "deviceId": "bf8a98c3c12214260eaf7s",
+        "deviceKey": "?Ja+-3wvR83y('Sl",
+        "storeAsCreds": false,
+        "deviceIp": "",
+        "retryTimeout": "1001",
+        "findTimeout": "2000",
+        "tuyaVersion": "3.1",
+        "eventMode": "event-both",
+        "logLevel": "log-level-debug",
+        "x": 750,
+        "y": 380,
+        "wires": [
+            [
+                "311fbd0417907162",
+                "68a8f412e837ccdc",
+                "1cdf910274c60dca",
+                "7fd171cbe8f941f9"
+            ],
+            [
+                "8d2397053db5a846"
+            ]
+        ]
+    },
+    {
+        "id": "11478bf32f755afd",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Turn On",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 100,
+        "y": 480,
+        "wires": [
+            [
+                "99542889ffa993e4"
+            ]
+        ]
+    },
+    {
+        "id": "0b6db385fcd814c7",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Turn Off",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "false",
+        "payloadType": "bool",
+        "x": 100,
+        "y": 520,
+        "wires": [
+            [
+                "99542889ffa993e4"
+            ]
+        ]
+    },
+    {
+        "id": "99542889ffa993e4",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "",
+        "func": "msg.payload ={\n   dps : 1,\n   //dps: 20,\n    set : msg.payload\n}\n\n/*\n\n    */\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 480,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "ec87b2353ed320df",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "RECONNECT ACTION",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"RECONNECT\"}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 280,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "45fe9df7c89362e7",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "DISCONNECT ACTION",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"DISCONNECT\"}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 240,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "a3eff05f44a42b27",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Get Status of dps 1",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"GET\" , \"dps\": 1}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 160,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "2d9fe0f3f2e2df92",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "SET EVENT MODE - DATA",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"SET_EVENT_MODE\",\"value\":\"event-data\"}",
+        "payloadType": "json",
+        "x": 160,
+        "y": 320,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "4b9c42815141dc16",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "SET EVENT MODE - DP REFRESH",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"SET_EVENT_MODE\",\"value\":\"event-dp-refresh\"}",
+        "payloadType": "json",
+        "x": 180,
+        "y": 360,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "48fd34cb8df63481",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Update Find Timeout",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"SET_FIND_TIMEOUT\",\"value\":1234}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 400,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "4cc96d735ac7c5f3",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Update  Retry Timeout",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"SET_RETRY_TIMEOUT\",\"value\":1234}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 440,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "a289c982691dd040",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "CONNECT ACTION",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"CONTROL\",\"action\":\"CONNECT\"}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 200,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "68a8f412e837ccdc",
+        "type": "debug",
+        "z": "a88f65a9838d7470",
+        "name": "Device Data",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 970,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "b4a9a4372a35d60c",
+        "type": "mqtt in",
+        "z": "a88f65a9838d7470",
+        "name": "",
+        "topic": "tuya/set/karin_irpanel_setpoint",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "ee1bb25c871ce5fc",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 740,
+        "wires": [
+            [
+                "15ea9242e85859f1",
+                "85afb17906ab13e7"
+            ]
+        ]
+    },
+    {
+        "id": "15ea9242e85859f1",
+        "type": "debug",
+        "z": "a88f65a9838d7470",
+        "name": "ks_panel_sp",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 350,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "85afb17906ab13e7",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "",
+        "func": "msg.payload ={\n   dps : 2,\n   //dps: 20,\n    set : msg.payload\n}\n\n/*\n\n    */\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 780,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "05d4040d73f4abf6",
+        "type": "mqtt in",
+        "z": "a88f65a9838d7470",
+        "name": "",
+        "topic": "tuya/set/badkamer_setpoint",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "ee1bb25c871ce5fc",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 640,
+        "wires": [
+            [
+                "c8f8f951a9de5dfe",
+                "52972447aeb0b674"
+            ]
+        ]
+    },
+    {
+        "id": "c8f8f951a9de5dfe",
+        "type": "debug",
+        "z": "a88f65a9838d7470",
+        "name": "badkamer_setpoint",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 370,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "52972447aeb0b674",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "",
+        "func": "msg.payload ={\n   dps : 2,\n   //dps: 20,\n    set : msg.payload\n}\n\n/*\n\n    */\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 680,
+        "wires": [
+            [
+                "1d52defdfd7483e2"
+            ]
+        ]
+    },
+    {
+        "id": "d46ce062d794df21",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Get Status of dps 2",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"GET\" , \"dps\": 2}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 1320,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "8896b930a5d7f10a",
+        "type": "inject",
+        "z": "a88f65a9838d7470",
+        "name": "Get Status of dps 3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"operation\":\"GET\" , \"dps\": 3}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 1360,
+        "wires": [
+            [
+                "bfb218b511d173df"
+            ]
+        ]
+    },
+    {
+        "id": "b3f94f629421adfd",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "Switch Status",
+        "func": "var result = msg.payload.data.dps;\nif (result[2] !== undefined) {\n    msg.payload = result[2]\n//    node.warn(\"found something\")\n//    node.warn(msg.payload)\n    msg.topic = \"tuya/karin_irpanel_setpoint/state\";\n    msg.sendnow = true;\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 960,
+        "wires": [
+            [
+                "c4afdf88f97878c3"
+            ]
+        ]
+    },
+    {
+        "id": "8e5fd41a5a2c8296",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "Switch Status",
+        "func": "var result = msg.payload.data.dps;\nif (result[3] !== undefined) {\n    msg.payload = result[3]\n//    node.warn(\"found something\")\n//    node.warn(msg.payload)\n    msg.topic = \"tuya/karin_irpanel_temp/state\";\n    msg.sendnow = true;\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 1000,
+        "wires": [
+            [
+                "c4afdf88f97878c3"
+            ]
+        ]
+    },
+    {
+        "id": "1cdf910274c60dca",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "Switch Status",
+        "func": "var result = msg.payload.data.dps;\nif (result[2] !== undefined) {\n    msg.payload = result[2]\n//    node.warn(\"found something\")\n//    node.warn(msg.payload)\n    msg.topic = \"tuya/badkamer_setpoint/state\";\n    msg.sendnow = true;\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 400,
+        "wires": [
+            [
+                "c4afdf88f97878c3"
+            ]
+        ]
+    },
+    {
+        "id": "7fd171cbe8f941f9",
+        "type": "function",
+        "z": "a88f65a9838d7470",
+        "name": "Switch Status",
+        "func": "var result = msg.payload.data.dps;\nif (result[3] !== undefined) {\n    msg.payload = result[3]/10\n//    node.warn(\"found something\")\n//    node.warn(msg.payload)\n    msg.topic = \"tuya/badkamer_radiator_temp/state\";\n    msg.sendnow = true;\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 440,
+        "wires": [
+            [
+                "c4afdf88f97878c3"
+            ]
+        ]
+    },
+    {
+        "id": "ee1bb25c871ce5fc",
+        "type": "mqtt-broker",
+        "name": "MQTT",
+        "broker": "192.168.1.109",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]
